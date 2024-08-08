@@ -17,8 +17,8 @@ if [[ "$REPLY" == y* ]]; then
 fi
 
 # Select remote dir for backups
-if [[ -s "$CONFDIR/remote-backup-path" ]]; then
-	read -p "Enter remote backup directory (remote:path/to/dir/) [default: $(cat $CONFDIR/remote-backup-path)]: " backup_dir
+if [[ -s "$CONFDIR/remote-backup-path.conf" ]]; then
+	read -p "Enter remote backup directory (remote:path/to/dir/) [default: $(cat $CONFDIR/remote-backup-path.conf)]: " backup_dir
 	if [[ -n "$backup_dir" ]]; then
 		echo "$backup_dir" >"$CONFDIR/remote-backup-path.conf"
 	fi
@@ -27,6 +27,31 @@ else
 	        read -p "Enter remote backup directory (remote:path/to/dir/): " backup_dir
 	done
 	echo "$backup_dir" >"$CONFDIR/remote-backup-path.conf"
+fi
+
+# Set up a passphrase
+if [[ -s "$CONFDIR/passhash.conf" ]]; then
+	read -s -p "Enter secret pasphrase to encrypt backup [blank to use existing]: " passphrase
+	echo
+	read -s -p "Confirm secret pasphrase [blank to use existing]: " passphrase_confirm
+	echo
+	until [[ "$passphrase" == "$passphrase_confirm" ]]; do
+		read -s -p "Enter secret pasphrase to encrypt backup [blank to use existing]: " passphrase
+		echo
+		read -s -p "Confirm secret pasphrase [blank to use existing]: " passphrase_confirm
+		echo
+	done
+	if [[ -n "$passphrase" ]]; then
+		shasum <<<"$passphrase" >"$CONFDIR/passhash.conf"
+	fi
+else
+	until [[ -n "$passphrase" && "$passphrase" == "$passphrase_confirm" ]]; do
+		read -s -p "Enter secret pasphrase to encrypt backup: " passphrase
+		echo
+		read -s -p "Confirm secret pasphrase: " passphrase_confirm
+		echo
+	done
+	shasum <<<"$passphrase" >"$CONFDIR/passhash.conf"
 fi
 
 # Select paths to back up
