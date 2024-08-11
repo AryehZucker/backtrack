@@ -12,7 +12,7 @@ fi
 # Set up rclone remote
 read -p "Would you like to set up a new connection for remote storage [y/n]? "
 if [[ "$REPLY" == y* ]]; then
-	rclone config
+	rclone config --config="$CONFDIR/rclone.conf"
 	echo
 fi
 
