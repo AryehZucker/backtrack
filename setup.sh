@@ -42,7 +42,7 @@ if [[ -s "$CONFDIR/passhash.conf" ]]; then
 		echo
 	done
 	if [[ -n "$passphrase" ]]; then
-		shasum <<<"$passphrase" >"$CONFDIR/passhash.conf"
+		shasum --algorithm 256 <<<"$passphrase" >"$CONFDIR/passhash.conf"
 	fi
 else
 	until [[ -n "$passphrase" && "$passphrase" == "$passphrase_confirm" ]]; do
@@ -51,12 +51,13 @@ else
 		read -s -p "Confirm secret pasphrase: " passphrase_confirm
 		echo
 	done
-	shasum <<<"$passphrase" >"$CONFDIR/passhash.conf"
+	shasum --algorithm 256 <<<"$passphrase" >"$CONFDIR/passhash.conf"
 fi
+chmod 600 "$CONFDIR/passhash.conf"
 
 # Select paths to back up
 if [[ ! -f "$CONFDIR/paths.conf" ]]; then
-	echo -en "# List local files and directories to back up (supports wildcards)\n\n" >"$CONFDIR/paths.conf"
+	echo -en "# List local files and directories to back up\n\n" >"$CONFDIR/paths.conf"
 fi
 nano "$CONFDIR/paths.conf"
 
