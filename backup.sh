@@ -46,7 +46,6 @@ done <"$CONFDIR/paths.conf"
 
 
 # Archive, compress, and encrypt files
-#bug: resulting tar file is root owned
 archfile="/tmp/files.$$.tmp"
 sudo tar --create $paths >$archfile
 gpg $VERB --batch --compress-algo zlib --passphrase "$passphrase" --output $archfile.gpg --symmetric $archfile
