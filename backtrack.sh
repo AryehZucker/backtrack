@@ -244,7 +244,7 @@ case $1 in
 	;;
 	
 	help|*)
-		echo "Usage: backtrack help|config|backup|restore"
+		echo "Usage: backtrack [help|config|backup|restore]"
 		exit
 	;;
 esac
