@@ -2,6 +2,7 @@
 
 
 
+NAME="backtrack"
 CONFDIR="$HOME/.config/backtrack"
 mkdir -p "$CONFDIR"
 
@@ -11,6 +12,13 @@ if [[ "$1" == "-v" ]]; then
 	VERB="--verbose"
 	shift
 fi
+
+
+# Clean up temporary files before every exit
+function cleanup {
+	find "/tmp" -name "$NAME.$$.*.tmp" -delete
+}
+trap cleanup EXIT
 
 
 function config {
@@ -118,9 +126,10 @@ function backup {
 	
 	
 	# Archive, compress, and encrypt files
-	archive="/tmp/files.$$.tmp"
-	sudo tar --create $paths >$archive
-	gpg $VERB --batch --compress-algo zlib --passphrase "$passphrase" --output $archive.gpg --symmetric $archive
+	archive_file="/tmp/$NAME.$$.files.tmp"
+	backup_file="/tmp/$NAME.$$.backup.tmp"
+	sudo tar --create $paths >$archive_file
+	gpg $VERB --batch --compress-algo zlib --passphrase "$passphrase" --output $backup_file --symmetric $archive_file
 	
 	
 	# Update packages
@@ -135,19 +144,15 @@ function backup {
 	
 	
 	# Encrypt package list
-	packagefile="/tmp/packages.$$.tmp"
-	gpg $VERB --batch --passphrase "$passphrase" --output $packagefile --symmetric "$CONFDIR/packages.conf"
+	package_file="/tmp/$NAME.$$.packages.tmp"
+	gpg $VERB --batch --passphrase "$passphrase" --output $package_file --symmetric "$CONFDIR/packages.conf"
 	
 	
 	# Upload archive & package list
 	#add: upload to folder remote/hostname/date-time/
 	remote=$(cat "$CONFDIR/remote-backup-path.conf")
-	rclone -P --config="$CONFDIR/rclone.conf" copyto $archive.gpg $remote/files
-	rclone -P --config="$CONFDIR/rclone.conf" copyto $packagefile $remote/packages
-	
-	
-	# Remove temp files
-	rm $archive $archive.gpg $packagefile
+	rclone -P --config="$CONFDIR/rclone.conf" copyto $backup_file $remote/files
+	rclone -P --config="$CONFDIR/rclone.conf" copyto $package_file $remote/packages
 }
 
 
@@ -181,28 +186,28 @@ function restore {
 	
 	# Input passphrase
 	until [[ -n "$passphrase" ]]; do
-		read -s -p "Enter secret pasphrase to decrypt backup: " passphrase
-		echo
+		read -s -p "Enter secret pasphrase to decrypt backup: " passphrase && echo
 	done
 	
 	
 	# Restore files
-	archive="/tmp/files.$$.tmp"
-	rclone -P --config="$CONFDIR/rclone.conf" copyto $remote/files $archive.gpg
-	gpg $VERB --batch --compress-algo zlib --passphrase "$passphrase" --output $archive --decrypt $archive.gpg
+	archive_file="/tmp/$NAME.$$.files.tmp"
+	backup_file="/tmp/$NAME.$$.backup.tmp"
+	rclone -P --config="$CONFDIR/rclone.conf" copyto $remote/files $backup_file
+	gpg $VERB --batch --compress-algo zlib --passphrase "$passphrase" --output $archive_file --decrypt $backup_file
 	dir=`pwd`
 	read -p "Extract to root (/) [y/n]? "
 	if [[ "$REPLY" == y* ]]; then
 		dir="/"
 	fi
 	cd "$dir"
-	sudo tar --extract --same-permissions --same-owner --file="$archive"
+	sudo tar --extract --same-permissions --same-owner --file="$archive_file"
 	cd -
 	
 	
 	# Install packages
-	packagefile="/tmp/packages.$$.tmp"
-	rclone -P --config="$CONFDIR/rclone.conf" copyto $remote/packages $packagefile
+	package_file="/tmp/$NAME.$$.packages.tmp"
+	rclone -P --config="$CONFDIR/rclone.conf" copyto $remote/packages $package_file
 	while read -r package; do
 		#skip past comments and blank lines
 		if [[ "$package" == "#"* || "$package" =~ ^[[:space:]]*$ ]]; then
@@ -210,13 +215,9 @@ function restore {
 		fi
 	
 		packages="$packages $package"
-	done < <(gpg $VERB --batch --passphrase "$passphrase" --decrypt "$packagefile")
+	done < <(gpg $VERB --batch --passphrase "$passphrase" --decrypt "$package_file")
 	echo $packages
 	sudo apt-get update && sudo apt-get install $packages -y
-	
-	
-	# Remove temp files
-	rm $archive $archive.gpg $packagefile
 }
 
 
