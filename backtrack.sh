@@ -14,6 +14,8 @@ fi
 
 
 function config {
+	echo "Configuring backtrack..."
+	
 	# Install dependencies
 	if [[ -z $(which rclone) ]]; then
 		echo "Installing rclone..."
@@ -21,6 +23,7 @@ function config {
 	fi
 	
 	# Set up rclone remote
+	echo -e "Create an rclone remote for backups\n"
 	rclone config --config="$CONFDIR/rclone.conf"
 	echo
 	
@@ -78,6 +81,8 @@ function config {
 
 
 function backup {
+	echo "Backing up computer..."
+	
 	# Input password and verify
 	read -s -p "Enter passphrase: " passphrase
 	echo
@@ -147,6 +152,8 @@ function backup {
 
 
 function restore {
+	echo "Restoring computer from backup..."
+	
 	# Install dependencies
 	if [[ -z $(which rclone) ]]; then
 		echo "Installing rclone..."
